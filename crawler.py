@@ -1,7 +1,7 @@
 from tqdm import tqdm
 from datetime import datetime
 
-
+import argparse
 import sqlite3
 import requests
 import json
@@ -94,13 +94,15 @@ def saveAirport(dbConnection, airport, airportExists, charts, binaries, mimeType
 def alignProgressBarDescription(text):
     return text.ljust(80)[0:80]
 
-def main():
-    update = False
-    country='el'
-    session = 'bc91495c250f985f453be0bbae98a32de9c50736'
+def main(session, country, update):
     dbConnection = sqlite3.connect('lido.sqlite')
     airports = getAirports(session, country)
     print('Downloading airports...')
+    countryFilter = ' for ' + country.__repr__() if len(country) > 0 else ''
+    print('Found {} airports{}.'.format(len(airports), countryFilter))
+    userInput = input('Do you want to continue to download all charts for these? (y/[n]): ')
+    if userInput not in ['y', 'Y']:
+        exit()
 
     processBar = tqdm(airports.items())
     for icao, airport in processBar:
@@ -131,5 +133,30 @@ def main():
 
     dbConnection.close()
 
+def parseArguments():
+    argparser = argparse.ArgumentParser(
+        prog='LIDO crawler',
+        description='Crawls the Nav Data Pro API of Aerosoft for all available LIDO charts.'
+    )
+    argparser.add_argument(
+        'SESSION', nargs="?",
+        help='A valid session id that will be used for all API calls'
+    )
+    argparser.add_argument(
+        '-u',
+        '--update',
+        help="Updates existing entries in your database.",
+        action="store_true"
+    )
+    argparser.add_argument(
+        '-c',
+        '--country',
+        help="Only crawl charts for the provided ICAO country code",
+        metavar='COUNTRY_CODE',
+        default=''
+    )
+    return argparser.parse_args()
+
 if __name__ == '__main__':
-    main()
+    args = parseArguments()
+    main(args.SESSION, args.country, args.update)
