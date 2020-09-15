@@ -100,6 +100,9 @@ def main(session, country, update):
     print('Downloading airports...')
     countryFilter = ' for ' + country.__repr__() if len(country) > 0 else ''
     print('Found {} airports{}.'.format(len(airports), countryFilter))
+    if len(airports) == 0:
+        exit()
+
     userInput = input('Do you want to continue to download all charts for these? (y/[n]): ')
     if userInput not in ['y', 'Y']:
         exit()
