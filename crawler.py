@@ -1,5 +1,7 @@
+from random import randint
 from tqdm import tqdm
 from datetime import datetime
+from time import sleep
 
 import argparse
 import sqlite3
@@ -102,10 +104,18 @@ def saveAirport(dbConnection, airport, airportExists, charts, binaries, mimeType
 
     dbConnection.commit()
 
-def alignProgressBarDescription(text):
-    return text.ljust(80)[0:80]
+def sleepRandom(processBar=None, min=15, max=60):
+    value = randint(min, max)
+    while value > 0:
+        if processBar:
+            message = alignProgressBarDescription('Disguise Pause: {} seconds remaining'.format(value))
+            processBar.set_description(message)
+            processBar.refresh()
 
-def main(session, countries, update):
+        sleep(1)
+        value -= 1
+
+def main(session, countries, update, disguise):
     dbConnection = sqlite3.connect('lido.sqlite')
 
     airports = getAirports(session, countries)
@@ -120,11 +130,16 @@ def main(session, countries, update):
         exit()
 
     processBar = tqdm(airports.items())
+    isFirst = True
     for icao, airport in processBar:
         airportExists = entryForAirportExists(icao, dbConnection)
         if airportExists and not update:
             continue
         else:
+            if disguise and not isFirst:
+                sleepRandom(processBar)
+
+            isFirst = False
             charts = getChartsForAirport(session, icao)
             processBar.set_description(alignProgressBarDescription('Collecting charts for {}'.format(icao)))
             processBar.refresh()
@@ -148,6 +163,9 @@ def main(session, countries, update):
 
     dbConnection.close()
 
+def alignProgressBarDescription(text):
+    return text.ljust(80)[0:80]
+
 def parseArguments():
     argparser = argparse.ArgumentParser(
         prog='LIDO crawler',
@@ -170,9 +188,15 @@ def parseArguments():
         metavar='COUNTRY_CODE',
         default=''
     )
+    argparser.add_argument(
+        '-d',
+        '--disguise',
+        help="Adds random pauses between airports to disguise the crawling. Recommended for larger chunks.",
+        action="store_true"
+    )
     return argparser.parse_args()
 
 if __name__ == '__main__':
     args = parseArguments()
     countries = [ country for country in args.country.split(',') if len(country) > 0 ]
-    main(args.SESSION, countries, args.update)
+    main(args.SESSION, countries, args.update, args.disguise)
