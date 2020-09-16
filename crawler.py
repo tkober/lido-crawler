@@ -6,14 +6,25 @@ import sqlite3
 import requests
 import json
 
-def getAirports(session, country=''):
+def getAirports(session, countries=[]):
+
+    if len(countries) > 0:
+        result = {}
+        for country in countries:
+            airports = getAirportForCountry(session, country)
+            result.update(airports)
+        return result
+    else:
+        return getAirportForCountry(session)
+
+def getAirportForCountry(session, country=''):
     data = {
         'sessionId': session,
         'country': country
     }
     response = requests.post('https://navdatapro.aerosoft.com/api/v3/airports', data=data)
     airports = json.loads(response.text)['airports']
-    return { airport['icao']: airport for airport in airports }
+    return {airport['icao']: airport for airport in airports}
 
 def getChartsForAirport(session, icao):
     data = {
@@ -94,11 +105,12 @@ def saveAirport(dbConnection, airport, airportExists, charts, binaries, mimeType
 def alignProgressBarDescription(text):
     return text.ljust(80)[0:80]
 
-def main(session, country, update):
+def main(session, countries, update):
     dbConnection = sqlite3.connect('lido.sqlite')
-    airports = getAirports(session, country)
+
+    airports = getAirports(session, countries)
     print('Downloading airports...')
-    countryFilter = ' for ' + country.__repr__() if len(country) > 0 else ''
+    countryFilter = ' for ' + countries.__repr__() if len(countries) > 0 else ''
     print('Found {} airports{}.'.format(len(airports), countryFilter))
     if len(airports) == 0:
         exit()
@@ -162,4 +174,5 @@ def parseArguments():
 
 if __name__ == '__main__':
     args = parseArguments()
-    main(args.SESSION, args.country, args.update)
+    countries = [ country for country in args.country.split(',') if len(country) > 0 ]
+    main(args.SESSION, countries, args.update)
