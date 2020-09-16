@@ -183,8 +183,8 @@ def parseArguments():
     )
     argparser.add_argument(
         '-c',
-        '--country',
-        help="Only crawl charts for the provided ICAO country code",
+        '--countries',
+        help="Only crawl charts for the provided ICAO country codes (comma separated)",
         metavar='COUNTRY_CODE',
         default=''
     )
@@ -198,5 +198,5 @@ def parseArguments():
 
 if __name__ == '__main__':
     args = parseArguments()
-    countries = [ country for country in args.country.split(',') if len(country) > 0 ]
+    countries = [ country for country in args.countries.split(',') if len(country) > 0 ]
     main(args.SESSION, countries, args.update, args.disguise)
